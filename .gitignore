@@ -158,3 +158,6 @@ fabric.properties
 
 # Own Log Files
 logs/*
+
+# Fibs
+**/fib-*.txt

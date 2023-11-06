@@ -3,7 +3,7 @@
 
 
 from enum import Enum
-
+import re
 
 class PolicyType(Enum):
     Reachability = 1
@@ -32,7 +32,24 @@ class PolicyType(Enum):
         if self.__class__ is other.__class__:
             return self.value < other.value
         return NotImplemented
+    
+    def __eq__(self, other):
+        # Helper method to equate to string
+        # Check if 'other' is a string
+        if isinstance(other, str):
+            try:
+                # Split the string into 'enum_name' and 'option_name'
+                enum_name, option_name = other.split('.')
+                # Check if 'enum_name' matches the name of the enum class, and 'option_name' matches the enum member's name
+                if enum_name == self.__class__.__name__ and option_name == self.name:
+                    return True
+            except ValueError:
+                pass  # Ignore exceptions caused by an improperly formatted string
+        # If 'other' is not a string or the comparison fails, use the default equality comparison
+        return super().__eq__(other)
 
+    def __hash__(self):
+        return hash(self.value)
 
 class PolicySource(object):
     def __init__(self, router):
@@ -40,6 +57,9 @@ class PolicySource(object):
 
     def __str__(self):
         return self.router
+
+    def __repr__(self):
+        return str(self)
 
     def __ge__(self, other):
         if self.__class__ is other.__class__:
@@ -80,6 +100,9 @@ class PolicyDestination(object):
     def __str__(self):
         return "{router}:{interface} ({subnet})".format(
             router=self.router, interface=self.interface, subnet=self.subnet)
+    
+    def __repr__(self):
+        return str(self)
 
     def __ge__(self, other):
         if self.__class__ is other.__class__:
@@ -109,6 +132,27 @@ class PolicyDestination(object):
 
     def __hash__(self):
         return hash(self.__str__())
+    
+    @classmethod
+    def from_string(cls, str):
+        # Define a regular expression pattern to match the expected format
+        pattern = r'^(?P<router>[^:]+):(?P<interface>[^ ]+) \((?P<subnet>[^)]+)\)$'
+
+        # Use re.match to check if the input string matches the pattern
+        match = re.match(pattern, str)
+
+        if match:
+            # If there is a match, extract the values into variables
+            router = match.group('router')
+            interface = match.group('interface')
+            subnet = match.group('subnet')
+        else:
+            # If no match is found, return None or raise an exception as needed
+            return None
+        
+        # Create an instance of the class with the extracted data
+        instance = cls(router, interface, subnet)
+        return instance
 
 
 class Policy(object):
@@ -124,6 +168,9 @@ class Policy(object):
             destinations=", ".join(str(destination) for destination in self.destinations))
         return "{policy_type} policy: {sources}->{destinations}, negate={negated}".format(
             policy_type=self.type, sources=sources_str, destinations=destinations_str, negated=self.negate)
+
+    def __repr__(self):
+        return str(self)
 
     def __eq__(self, other):
         if self.type == other.type and self.sources == other.sources and \
@@ -151,6 +198,21 @@ class Policy(object):
             policy = LoadBalancingPolicy(sources, destinations, num_paths=specifics)
         else:
             policy = None
+        return policy
+    
+    @classmethod
+    def from_df(cls, df):
+        # Quick and dirty (maybe TODO: make this less ugly)
+        # Extract the type from the DataFrame
+        type = df.type
+        sources = [df.source]
+        # Extract destinations from the string set
+        str_destinations = df.Destinations[1:-1].split(', ')
+        destinations = [PolicyDestination.from_string(dest) for dest in str_destinations]
+        specifics = int(df.specifics) if df.specifics.isdigit() else df.specifics
+
+        policy = Policy.get_policy(type, sources, destinations, specifics)
+        
         return policy
 
 

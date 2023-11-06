@@ -71,12 +71,15 @@ def init_backend(ms_manager, scenario, base_path, config_path, port):
     ms_manager.restart(backend_calls=0, force=True)
 
 
-def build_network(backend, scenario_path, max_failures, waypoints_min, waypoints_fraction):
+def build_network(backend, scenario_path, max_failures, waypoints_min, waypoints_fraction, seed_value=None):
     topology_files = backend.get_topology()
     network = BackendTopologyBuilder.build_topology(topology_files, scenario_path)
 
-    # get waypoints
-    all_routers = network.nodes()
+    # Set a seed for the generation of random waypoints
+    if seed_value is not None: random.seed(seed_value)
+
+    # get waypoints, sort them in order to get a consistent ordering for the random sampling
+    all_routers = sorted(network.nodes())
     num_waypoints = max(waypoints_min, int(len(all_routers) / waypoints_fraction))
     waypoints = random.sample(all_routers, num_waypoints)
 

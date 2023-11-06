@@ -9,10 +9,13 @@ from config2spec.netenv.sampler import Sampler
 from config2spec.policies.policy_db import PolicyStatus
 from config2spec.topology.links import Link
 
+import pickle
 
 class PolicySumSampler(Sampler):
     def __init__(self, netenv, policy_db, max_num_samples=None, seed=None, use_provided_samples=False, debug=False):
         super(PolicySumSampler, self).__init__(netenv, max_num_samples, seed, use_provided_samples, True, debug)
+
+        self.iteration = 0
 
         self.policy_db = policy_db
 
@@ -48,6 +51,11 @@ class PolicySumSampler(Sampler):
 
         # order the links by their weight and create the corresponding probability distribution
         all_edges = sorted(graph.edges.data("weight"), key=lambda x: x[2], reverse=True)
+
+        # Save the data
+        with open(f'weight_data/graph-no-waypoints-{self.iteration}.pkl', 'wb') as file:
+            pickle.dump(graph, file)
+        self.iteration += 1
 
         if self.debug:
             output = "Weighted Graph:\n"

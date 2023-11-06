@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     # initialize all the data structures
     network, netenv, waypoints = build_network(ms_manager.backend, scenario_path, max_failures,
-                                               waypoints_min, waypoints_fraction)
+                                               waypoints_min, waypoints_fraction, seed)
     dp_engine = init_dp_engine(network, fib_path, debug=args.debug)
 
     # init policy Database
